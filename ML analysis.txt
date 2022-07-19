@@ -1,0 +1,132 @@
+# PIPELIne
+from sklearn.neighbors import KNeighborsClassifier, NeighborhoodComponentsAnalysis
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import classification_report
+random_state =42
+n_neighbors = 5
+pca = make_pipeline(StandardScaler(), 
+                    PCA(n_components=10, random_state=random_state))
+# Reduce dimension to 2 with LinearDiscriminantAnalysis
+#lda = make_pipeline(StandardScaler(), LinearDiscriminantAnalysis(n_components=1))
+
+# Reduce dimension to 2 with NeighborhoodComponentAnalysis
+#nca = make_pipeline(StandardScaler(), NeighborhoodComponentsAnalysis(n_components=1, random_state=random_state))
+#clf = make_pipeline(NeighborhoodComponentsAnalysis(n_components=1, random_state=random_state),
+                    #KNeighborsClassifier(n_neighbors=n_neighbors))
+# Use a nearest neighbor classifier to evaluate the methods
+knn = KNeighborsClassifier(n_neighbors=n_neighbors)
+#knn = make_pipeline(KNeighborsClassifier(n_neighbors=n_neighbors))
+# Make a list of the methods to be compared
+dim_reduction_methods = [("PCA", pca)]
+
+#
+
+for i, (name, model) in enumerate(dim_reduction_methods):
+    plt.figure()
+    
+    # Fit the method's model
+    model.fit(x_train, y_train)
+
+    # Fit a nearest neighbor classifier on the embedded training set
+    knn.fit(model.transform(x_train), y_train)
+    knn_pred = knn.predict((model.transform(x_test)))
+    # Compute the nearest neighbor accuracy on the embedded test set
+    acc_knn = knn.score(model.transform(x_test), y_test)
+
+    # Embed the data set in 2 dimensions using the fitted model
+    X_embedded = model.transform(x)
+
+    # Plot the projected points and show the evaluation score
+    #plt.scatter(X_embedded[:, 0], X_embedded[:, 1], c=y, s=30, cmap="Set1")
+    print(
+        "{}, KNN (k={})\nTest accuracy = {:.4f}".format(name, n_neighbors, acc_knn)
+    )
+plt.show()
+
+#CONFUSION MATRIX
+
+cm = confusion_matrix(y_test, knn_pred  )
+
+#print(cm)
+
+TP = cm[0][0]
+TN = cm[1][1]
+FN = cm[1][0]
+FP = cm[0][1]
+
+print('Accuracy=', (TP+TN)/(TP+TN+FP+FN))
+print('Sensitivity=', (TP)/(TP+FN))
+print('Specificity=', (TN)/(TN+FP))
+
+#CLASSIFICATION
+print (classification_report(y_test, knn_pred  ))
+
+#coss validation score
+
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import KFold,StratifiedKFold, ShuffleSplit, StratifiedShuffleSplit
+cv = KFold(n_splits=10, random_state=1, shuffle=True)
+scores = cross_val_score(acc_knn, x, y, cv=cv, scoring ='accuracy')
+print(scores)
+print("%0.3f accuracy with a standard deviation of %0.2f" % (scores.mean(), scores.std()))
+
+
+from sklearn.metrics import roc_curve, roc_auc_score
+from sklearn.neighbors import KNeighborsClassifier, NeighborhoodComponentsAnalysis
+
+knn  = KNeighborsClassifier(n_neighbors =5, metric = 'minkowski', p = 2)
+knn.fit(x_train,y_train)
+knn_pred = knn.predict(x_test)
+#print("Score:", knn.score(x_test,y_test))
+
+#print('Accuracy:', metrics.accuracy_score(y_test, knn_pred))
+
+
+
+#plt.style.use('fivethirtyeight')
+
+r1_prob = [0 for _ in range(len(y_test))]
+knn_prob = knn.predict_proba(x_test)
+
+#probabilities of positive outcomes
+
+knn_prob = knn_prob[:,1]
+r1_auc = roc_auc_score(y_test, r1_prob)
+knn_auc = roc_auc_score(y_test, knn_prob)
+
+print('Random (chance) precidtion: AUCROC = %.3f' %(r1_auc))
+print('Knn accuracy: AUCROC = %.5f' %(knn_auc))
+
+# TRUE POSITIVE RATE AND FALSE POSITIVE RATE
+
+r_fpr, r_tpr, threshold = roc_curve(y_test, r1_prob)
+knn_fpr, knn_tpr, threshold = roc_curve(y_test, knn_prob)
+
+plt.plot(r_fpr, r_tpr)
+plt.plot(knn_fpr, knn_tpr)
+
+
+
+r_prob = [0 for _  in range (len(y_test))]
+knn_prob = knn.predict_proba(x_test)
+
+# Probabilities for positive outcomes
+
+knn_prob = knn_prob[:,1]
+
+r_acu = roc_auc_score(y_test,r_prob)
+knn_acu = roc_auc_score(y_test, knn_prob)
+
+print('Random (chance) precidtion: AUCROC = %.3f' %(r_acu))
+print('Knn accuracy: AUCROC = %.5f' %(knn_acu))
+
+
+#True positivies and false positive rates
+r_fpr, r_tpr, thresholds = roc_curve(y_test, r_prob)
+knn_fpr, knn_tpr, thresholds = roc_curve(y_test, knn_prob)
+
+plt.plot(r_fpr, r_tpr, linestyle = '--')
+plt.plot(knn_fpr, knn_tpr, linestyle = '-')
+
+
+plt.show()
